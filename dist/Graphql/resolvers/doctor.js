@@ -18,9 +18,6 @@ const bcrypt_1 = __importDefault(require("bcrypt"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 dotenv_1.default.config();
-const newl = () => {
-    console.log("object");
-};
 const secret = process.env.JWT_SECRET;
 const DoctorResolver = {
     Query: {

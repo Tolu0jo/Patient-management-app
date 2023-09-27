@@ -5,9 +5,7 @@ import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 dotenv.config();
 
-const newl = ()=>{
-  console.log("object")
-}
+
 const secret = process.env.JWT_SECRET as string;
 
 const DoctorResolver = {
