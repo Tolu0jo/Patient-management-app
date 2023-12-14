@@ -16,14 +16,13 @@ const doctorModel_1 = __importDefault(require("../../Model/doctorModel"));
 const apollo_server_1 = require("apollo-server");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const utils_1 = require("../../utils");
+const graphql_1 = require("graphql");
 dotenv_1.default.config();
-const secret = process.env.JWT_SECRET;
 const DoctorResolver = {
     Query: {
-        allDoctors: (req) => __awaiter(void 0, void 0, void 0, function* () {
+        allDoctors: () => __awaiter(void 0, void 0, void 0, function* () {
             try {
-                console.log(req);
                 const doctors = yield doctorModel_1.default.find();
                 return doctors;
             }
@@ -31,7 +30,7 @@ const DoctorResolver = {
                 console.log(error);
             }
         }),
-        eachDoctor: (_, { id }) => __awaiter(void 0, void 0, void 0, function* () {
+        eachDoctor: (_, { id }, context) => __awaiter(void 0, void 0, void 0, function* () {
             try {
                 const doctor = yield doctorModel_1.default.findById(id);
                 return doctor;
@@ -40,6 +39,11 @@ const DoctorResolver = {
                 console.log(error);
             }
         }),
+        me: (_, __, context) => __awaiter(void 0, void 0, void 0, function* () {
+            const { id } = context;
+            const doctor = yield doctorModel_1.default.findById(id);
+            return doctor;
+        })
     },
     Mutation: {
         CreateDoctor: (_, { CreateDoctorInput: { email, DoctorsName, password, phoneNumber, gender, specialization, }, }) => __awaiter(void 0, void 0, void 0, function* () {
@@ -58,34 +62,31 @@ const DoctorResolver = {
                     gender: gender,
                     specialization: specialization,
                 });
-                const token = jsonwebtoken_1.default.sign({ doctorId: newDoctor._id }, secret, {
-                    expiresIn: "2h",
-                });
-                newDoctor.token = token;
+                const token = yield (0, utils_1.createToken)(newDoctor._id);
                 const doctor = yield newDoctor.save();
-                return doctor;
+                return { doctor, token };
             }
             catch (error) {
-                console.log(error);
+                throw new graphql_1.GraphQLError(`${error}`);
             }
         }),
         LoginDoctor: (_, { LoginInput: { email, password } }) => __awaiter(void 0, void 0, void 0, function* () {
             const validDoctor = yield doctorModel_1.default.findOne({ email });
-            const validPassword = yield bcrypt_1.default.compare(password, (validDoctor === null || validDoctor === void 0 ? void 0 : validDoctor.password) || "");
+            if (!validDoctor)
+                throw new apollo_server_1.ApolloError("Invalid Credentials", "INVALID_CREDENTIALS");
+            const validPassword = yield bcrypt_1.default.compare(password, validDoctor.password);
             if (validDoctor && validPassword) {
-                const token = jsonwebtoken_1.default.sign({ doctorId: validDoctor._id }, secret, {
-                    expiresIn: "2h",
-                });
-                validDoctor.token = token;
-                return validDoctor;
+                const token = yield (0, utils_1.createToken)(validDoctor._id);
+                return { validDoctor, token };
             }
             else {
                 throw new apollo_server_1.ApolloError("Invalid Credentials", "INVALID_CREDENTIALS");
             }
         }),
-        UpdateDoctor: (_, { id, UpdateDoctorInput: { email, DoctorsName, password, phoneNumber, gender, specialization, }, }) => __awaiter(void 0, void 0, void 0, function* () {
+        UpdateDoctor: (_, { UpdateDoctorInput: { email, DoctorsName, password, phoneNumber, gender, specialization, }, }, context) => __awaiter(void 0, void 0, void 0, function* () {
             try {
                 const genSalt = 10;
+                const { id } = context;
                 const encryptedPassword = yield bcrypt_1.default.hash(password, genSalt);
                 const updatedDoctor = yield doctorModel_1.default.updateOne({ _id: id }, {
                     email: email,
@@ -101,8 +102,9 @@ const DoctorResolver = {
                 console.log(error);
             }
         }),
-        DeleteDoctor: (_, { id }) => __awaiter(void 0, void 0, void 0, function* () {
+        DeleteDoctor: (_, __, context) => __awaiter(void 0, void 0, void 0, function* () {
             try {
+                const { id } = context;
                 const doctor = yield doctorModel_1.default.deleteOne({ _id: id });
                 return doctor.deletedCount;
             }

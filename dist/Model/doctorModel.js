@@ -48,9 +48,6 @@ const DoctorSchema = new mongoose_1.Schema({
     specialization: {
         type: String,
         required: true,
-    },
-    token: {
-        type: String
     }
 });
 const Doctor = mongoose_1.default.model("Doctor", DoctorSchema);

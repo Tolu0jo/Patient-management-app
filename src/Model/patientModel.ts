@@ -30,6 +30,10 @@ const PatientSchema = new Schema(
       type: String,
       required: true,
     },
+    doctorId: {
+      type: String,
+      required: true,
+    },
     age: {
       type: Number,
       required: true,
@@ -75,5 +79,5 @@ const PatientSchema = new Schema(
     },
   }
 );
-const Patient = mongoose.model("Patient", PatientSchema);
+const Patient = mongoose.model<PatientAttributes>("Patient", PatientSchema);
 export default Patient;

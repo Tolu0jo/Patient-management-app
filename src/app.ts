@@ -7,17 +7,40 @@ import PatientTypeDefs from "./Graphql/typeDefs/patientTypeDef"
 import DoctorResolver from "./Graphql/resolvers/doctor"
 import PatientResolver from "./Graphql/resolvers/patient"
 import jwt from"jsonwebtoken";
+import { Request } from "express"
+import { verifyToken } from "./utils"
+import { idText } from "typescript"
+import { GraphQLError } from "graphql"
 const typeDefs = mergeTypeDefs([DoctorTypeDefs,PatientTypeDefs])
 const resolvers = mergeResolvers([DoctorResolver,PatientResolver])
 
 dotenv.config()
-const secret = process.env.JWT_SECRET as string;
+
 
 const server = new ApolloServer({
 typeDefs,
 resolvers,
-  context: ({ req }) => {{req};
+  context: async ({ req }: { req: Request }) => {
+  try {
+    const isIntrospection = req.body?.operationName === 'IntrospectionQuery';
+
+    if (isIntrospection) {
+      return null; // Skip token verification for introspection
+    }
+    const token = req.headers.authorization?.split(" ")[1];
+   
+    if(!token) return new GraphQLError("No token provided");
+    const user = await verifyToken(token);
+   
+    return user;
+  } catch (error) {
+    throw new GraphQLError("Invalid token"),{
+      extensions:{code:"NOT_AUTHENTICATED"}
+    }
+  }
+   
   },
+  persistedQueries: false,
 });
 
 

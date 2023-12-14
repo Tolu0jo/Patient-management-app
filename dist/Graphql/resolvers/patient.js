@@ -13,10 +13,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const patientModel_1 = __importDefault(require("../../Model/patientModel"));
+const secret = process.env.JWT_SECRET;
 const PatientResolver = {
     Query: {
-        allPatients: () => __awaiter(void 0, void 0, void 0, function* () {
+        allPatients: (_, __, context) => __awaiter(void 0, void 0, void 0, function* () {
             try {
+                console.log(context);
                 const patients = yield patientModel_1.default.find();
                 return patients;
             }
@@ -33,14 +35,20 @@ const PatientResolver = {
                 console.log(error);
             }
         }),
+        myPatients: (_, __, context) => __awaiter(void 0, void 0, void 0, function* () {
+            const { id } = context;
+            const patients = yield patientModel_1.default.find({ doctorId: id });
+            return patients;
+        })
     },
     Mutation: {
-        RegisterPatient: (_, { RegisterPatientInput: { age, patientName, weight, height, bloodGroup, genotype, bloodPressure, HIV_status, hepatitis, }, }) => __awaiter(void 0, void 0, void 0, function* () {
+        RegisterPatient: (_, { RegisterPatientInput: { age, patientName, weight, height, bloodGroup, genotype, bloodPressure, HIV_status, hepatitis, }, }, context) => __awaiter(void 0, void 0, void 0, function* () {
             try {
                 const newPatient = new patientModel_1.default({
                     patientName: patientName,
                     age: age,
                     weight: weight,
+                    doctorId: context.id,
                     height: height,
                     bloodGroup: bloodGroup,
                     genotype: genotype,
@@ -55,16 +63,18 @@ const PatientResolver = {
                 console.log(error);
             }
         }),
-        UpdatePatient: (_, { id, UpdatePatientInput: { age, patientName, weight, height, bloodGroup, genotype, bloodPressure, HIV_status, hepatitis, }, }) => __awaiter(void 0, void 0, void 0, function* () {
+        UpdatePatient: (_, { id, UpdatePatientInput: { age, patientName, weight, height, bloodGroup, genotype, bloodPressure, HIV_status, hepatitis, }, }, context) => __awaiter(void 0, void 0, void 0, function* () {
             try {
+                const doctorId = context.id;
                 const message = { message: "Patient Updated Successfully" };
-                yield patientModel_1.default.updateOne({ _id: id }, {
+                yield patientModel_1.default.updateOne({ _id: id, doctorId }, {
                     patientName: patientName,
                     age: age,
                     weight: weight,
                     height: height,
                     bloodGroup: bloodGroup,
                     genotype: genotype,
+                    doctorId,
                     bloodPressure: bloodPressure,
                     HIV_status: HIV_status,
                     hepatitis: hepatitis,
@@ -75,10 +85,11 @@ const PatientResolver = {
                 console.log(error);
             }
         }),
-        DeletePatient: (_, { id }) => __awaiter(void 0, void 0, void 0, function* () {
+        DeletePatient: (_, { id }, context) => __awaiter(void 0, void 0, void 0, function* () {
             try {
+                const doctorId = context.id;
                 const message = { message: "Patient Deleted Successfully" };
-                yield patientModel_1.default.deleteOne({ _id: id });
+                yield patientModel_1.default.deleteOne({ _id: id, doctorId });
                 return message;
             }
             catch (error) {

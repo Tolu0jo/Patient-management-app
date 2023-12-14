@@ -3,23 +3,22 @@ import { ApolloError, AuthenticationError } from "apollo-server";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
+import { createToken } from "../../utils";
+import { GraphQLError } from "graphql";
 dotenv.config();
-
-
-const secret = process.env.JWT_SECRET as string;
 
 const DoctorResolver = {
   Query: {
-    allDoctors: async ( req:Request) => {
+    allDoctors: async () => {
       try {
-        console.log(req)
+      
         const doctors = await Doctor.find();
         return doctors;
       } catch (error) {
         console.log(error);
       }
     },
-    eachDoctor: async (_: unknown, { id }: UpdateDoctor) => {
+    eachDoctor: async (_: unknown, { id }: UpdateDoctor,context:any) => {
       try {
         const doctor = await Doctor.findById(id);
         return doctor;
@@ -27,7 +26,14 @@ const DoctorResolver = {
         console.log(error);
       }
     },
+  me:async(_:unknown,__:unknown,context:any)=>{
+    const {id}=context;
+
+    const doctor = await Doctor.findById(id);
+    return doctor;
+  }
   },
+
   Mutation: {
     CreateDoctor: async (
       _: any,
@@ -65,33 +71,30 @@ const DoctorResolver = {
           specialization: specialization,
         });
 
-        const token = jwt.sign({ doctorId: newDoctor._id }, secret, {
-          expiresIn: "2h",
-        });
+        
 
-        newDoctor.token = token;
+        const token = await createToken(newDoctor._id as unknown as string)
         const doctor = await newDoctor.save();
-
-        return doctor;
+      
+        return {doctor,token};
       } catch (error) {
-        console.log(error);
+        
+        throw new GraphQLError(`${error}`);
       }
     },
     LoginDoctor: async (
       _: unknown,
-      { LoginInput: { email, password } }: Login
+      { LoginInput: { email, password } }:Login
     ) => {
       const validDoctor = await Doctor.findOne({ email });
+      if(!validDoctor) throw new ApolloError("Invalid Credentials", "INVALID_CREDENTIALS");
       const validPassword = await bcrypt.compare(
         password,
-        validDoctor?.password || ""
+        validDoctor.password 
       );
       if (validDoctor && validPassword) {
-        const token = jwt.sign({ doctorId: validDoctor._id }, secret, {
-          expiresIn: "2h",
-        });
-        validDoctor.token = token;
-        return validDoctor;
+        const token = await createToken(validDoctor._id as unknown as string)
+        return {validDoctor,token};
       } else {
         throw new ApolloError("Invalid Credentials", "INVALID_CREDENTIALS");
       }
@@ -99,7 +102,6 @@ const DoctorResolver = {
     UpdateDoctor: async (
       _: unknown,
       {
-        id,
         UpdateDoctorInput: {
           email,
           DoctorsName,
@@ -108,11 +110,12 @@ const DoctorResolver = {
           gender,
           specialization,
         },
-      }: UpdateDoctor
+      }: UpdateDoctor,
+      context:any
     ) => {
       try {
         const genSalt = 10;
-
+        const {id}=context;
         const encryptedPassword = await bcrypt.hash(password, genSalt);
         const updatedDoctor = await Doctor.updateOne(
           { _id: id },
@@ -131,8 +134,9 @@ const DoctorResolver = {
       }
     },
 
-    DeleteDoctor: async (_: unknown, { id }: UpdateDoctor) => {
+    DeleteDoctor: async (_: unknown, __:unknown,context:any) => {
       try {
+        const{id}=context;
         const doctor = await Doctor.deleteOne({ _id: id });
         return doctor.deletedCount;
       } catch (error) {

@@ -9,8 +9,9 @@ type Doctor{
     phoneNumber: String,
     gender: String,
     specialization: String,
-    token:String
+    token: String
   }
+  
 input CreateDoctorInput
 {
     email: String!,
@@ -36,6 +37,7 @@ input UpdateDoctorInput
   type Query {
     allDoctors:[Doctor]!
     eachDoctor(id:ID!):Doctor
+    me:Doctor
   }
   type Mutation{
     CreateDoctor(CreateDoctorInput:CreateDoctorInput):Doctor

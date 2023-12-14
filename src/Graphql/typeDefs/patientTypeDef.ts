@@ -8,6 +8,7 @@ type Patient{
     weight: String,
     height: String,
     bloodGroup: String,
+    doctorId: String,
     genotype: String,
     bloodPressure:String,
     HIV_status:String,
@@ -44,6 +45,7 @@ input UpdatePatientInput
   type Query {
     allPatients:[Patient]!
     eachPatient(id:ID!):Patient
+    myPatients:[Patient]
   }
   type Mutation{
     RegisterPatient(RegisterPatientInput:RegisterPatientInput):Patient

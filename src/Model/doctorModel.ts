@@ -53,9 +53,6 @@ const DoctorSchema = new Schema(
       specialization: {
         type: String,
         required: true,
-      },
-      token:{
-        type:String
       }
     }
   );

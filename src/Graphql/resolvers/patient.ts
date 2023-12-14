@@ -1,9 +1,18 @@
 import Patient, { PatientRegister, UpdatePatient } from "../../Model/patientModel";
+import jwt from "jsonwebtoken"
+const secret = process.env.JWT_SECRET as string;
+
+
 
 const PatientResolver = {
   Query: {
-    allPatients: async () => {
+    allPatients: async (_:unknown,__:unknown,context:any) => {
+   
       try {
+    
+      console.log(context)
+       
+
         const patients = await Patient.find();
         return patients;
       } catch (error) {
@@ -17,7 +26,13 @@ const PatientResolver = {
       } catch (error) {
         console.log(error);
       }
+   
     },
+    myPatients:async(_:unknown,__:unknown,context:any)=>{
+     const {id} = context
+     const patients = await Patient.find({doctorId:id})
+     return patients;
+    }
   },
   Mutation: {
     RegisterPatient: async (
@@ -34,13 +49,16 @@ const PatientResolver = {
           HIV_status,
           hepatitis,
         },
+        
       }: PatientRegister
+      ,context:any
     ) => {
       try {
         const newPatient = new Patient({
           patientName: patientName,
           age: age,
           weight: weight,
+          doctorId:context.id,
           height: height,
           bloodGroup: bloodGroup,
           genotype: genotype,
@@ -72,13 +90,15 @@ const PatientResolver = {
           HIV_status,
           hepatitis,
         },
-      }: UpdatePatient
+      }: UpdatePatient,
+      context:any
+      
     ) => {
       try {
-
+        const doctorId=context.id
         const message = {message:"Patient Updated Successfully"}
         await Patient.updateOne(
-          { _id: id },
+          { _id: id,doctorId },
           {
             patientName: patientName,
             age: age,
@@ -86,6 +106,7 @@ const PatientResolver = {
             height: height,
             bloodGroup: bloodGroup,
             genotype: genotype,
+            doctorId,
             bloodPressure: bloodPressure,
             HIV_status: HIV_status,
             hepatitis: hepatitis,
@@ -96,10 +117,11 @@ const PatientResolver = {
         console.log(error);
       }
     },
-    DeletePatient: async (_: unknown, { id }: UpdatePatient) => {
+    DeletePatient: async (_: unknown, { id }: UpdatePatient,context:any) => {
       try {
+        const doctorId = context.id
         const message = {message:"Patient Deleted Successfully"}
-       await Patient.deleteOne({ _id: id });
+        await Patient.deleteOne({ _id: id,doctorId});
         return message
       } catch (error) {
         console.log(error);
